@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FPOCAST 2.0 – Model Selector (Live Demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --green:#1f7a4d; --green-d:#155c39; --green-l:#e7f4ec; --leaf:#3fae6e;
+    --soil:#7a5a3a; --ink:#16231c; --muted:#5f6f66; --line:#dfe7e2;
+    --bg:#f3f6f4; --card:#ffffff; --warn:#b7791f; --red:#c0392b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:Inter,system-ui,sans-serif;background:linear-gradient(160deg,#e9f3ed,#f7f4ee);color:var(--ink);min-height:100vh;display:flex;align-items:flex-start;justify-content:center;gap:28px;padding:28px 16px;flex-wrap:wrap}
+  .side{max-width:360px;padding-top:30px}
+  .side h1{font-size:28px;font-weight:800;letter-spacing:-.5px;color:var(--green-d)}
+  .side h1 span{color:var(--soil)}
+  .side p{color:var(--muted);margin:10px 0 18px;line-height:1.55;font-size:15px}
+  .side ol{padding-left:18px;color:var(--ink);font-size:14px;line-height:1.8}
+  .side .note{margin-top:18px;font-size:12.5px;background:#fff8e6;border:1px solid #f1dfb0;color:#7a5a12;padding:10px 12px;border-radius:10px;line-height:1.5}
+  .phone{width:380px;max-width:100%;height:760px;background:#0f1a14;border-radius:44px;padding:12px;box-shadow:0 30px 60px -20px rgba(20,60,40,.45)}
+  .screen{width:100%;height:100%;background:var(--bg);border-radius:34px;overflow:hidden;display:flex;flex-direction:column;position:relative}
+  .topbar{background:var(--green);color:#fff;padding:22px 20px 16px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .logo{width:34px;height:34px;border-radius:10px;background:#fff;display:grid;place-items:center}
+  .brand b{font-size:17px;font-weight:800;letter-spacing:-.2px}
+  .brand small{display:block;font-size:11.5px;opacity:.85;font-weight:500}
+  .steps{display:flex;gap:6px;margin-top:14px}
+  .steps div{flex:1;height:4px;border-radius:4px;background:rgba(255,255,255,.28)}
+  .steps div.on{background:#fff}
+  .demo-tag{position:absolute;top:22px;right:18px;font-size:10px;font-weight:700;background:rgba(255,255,255,.18);color:#fff;padding:4px 8px;border-radius:20px;letter-spacing:.5px}
+  .body{flex:1;overflow-y:auto;padding:18px}
+  .view{display:none;animation:fade .25s ease}
+  .view.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  h2{font-size:20px;font-weight:700;margin-bottom:4px}
+  .sub{color:var(--muted);font-size:13.5px;margin-bottom:16px;line-height:1.45}
+  label{font-size:12px;font-weight:600;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+  input{width:100%;padding:13px 14px;border:1.5px solid var(--line);border-radius:12px;font:500 15px 'JetBrains Mono',monospace;background:#fff;color:var(--ink)}
+  input:focus{outline:none;border-color:var(--leaf)}
+  .btn{width:100%;padding:15px;border:none;border-radius:14px;background:var(--green);color:#fff;font:700 15px Inter,sans-serif;cursor:pointer;margin-top:14px;transition:.15s}
+  .btn:hover{background:var(--green-d)}
+  .btn:disabled{background:#a9c2b4;cursor:not-allowed}
+  .btn.ghost{background:#fff;color:var(--green);border:1.5px solid var(--green)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin-top:12px}
+  .row{display:flex;justify-content:space-between;align-items:center;font-size:14px;padding:6px 0}
+  .row span:first-child{color:var(--muted)}
+  .row b{font-weight:600}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;background:#c5cfc9;vertical-align:middle}
+  .dot.ok{background:var(--leaf);box-shadow:0 0 0 3px rgba(63,174,110,.2)}
+  .dot.wait{background:var(--warn);animation:pulse 1s infinite}
+  @keyframes pulse{50%{opacity:.35}}
+  .model{display:flex;gap:12px;align-items:center;background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px;cursor:pointer;transition:.15s}
+  .model:hover{border-color:#b9d8c6}
+  .model.sel{border-color:var(--green);background:var(--green-l)}
+  .model .ic{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;font-size:26px;flex-shrink:0}
+  .model .t{flex:1;min-width:0}
+  .model .t b{display:block;font-size:15px}
+  .model .t small{color:var(--muted);font-size:12px;display:block;margin-top:2px}
+  .tags{display:flex;gap:5px;margin-top:6px;flex-wrap:wrap}
+  .tag{font-size:10.5px;font-weight:600;background:#eef2ef;color:#4b5c52;padding:3px 7px;border-radius:6px}
+  .radio{width:20px;height:20px;border-radius:50%;border:2px solid #b8c6be;flex-shrink:0;position:relative}
+  .model.sel .radio{border-color:var(--green)}
+  .model.sel .radio::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--green)}
+  .prog{height:8px;background:#e3ebe6;border-radius:8px;overflow:hidden;margin:10px 0 4px}
+  .prog div{height:100%;width:0;background:linear-gradient(90deg,var(--leaf),var(--green));transition:width .2s}
+  .stage{display:flex;align-items:center;gap:10px;font-size:13.5px;padding:7px 0;color:var(--muted)}
+  .stage .s{width:20px;height:20px;border-radius:50%;border:2px solid #cfd9d3;display:grid;place-items:center;font-size:11px;flex-shrink:0}
+  .stage.run{color:var(--ink);font-weight:600}
+  .stage.run .s{border-color:var(--warn);border-top-color:transparent;animation:spin .8s linear infinite}
+  .stage.done{color:var(--ink)}
+  .stage.done .s{background:var(--leaf);border-color:var(--leaf);color:#fff}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .hero{text-align:center;padding:10px 0 4px}
+  .tick{width:72px;height:72px;border-radius:50%;background:var(--green-l);display:grid;place-items:center;margin:0 auto 10px}
+  .log{background:#0f1a14;color:#a7e3bf;font:12px/1.6 'JetBrains Mono',monospace;border-radius:12px;padding:10px 12px;margin-top:14px;max-height:140px;overflow-y:auto}
+  .log .m{color:#7fb3ff}.log .e{color:#ffb4a8}.log .g{color:#6b8576}
+  .err{color:var(--red);font-size:13px;margin-top:8px;display:none}
+  .foot{font-size:11px;color:var(--muted);text-align:center;padding:8px 0 14px}
+  @media (max-width:600px){
+    body{padding:0;display:block}
+    .side{display:none}
+    .phone{width:100%;height:100vh;height:100dvh;border-radius:0;padding:0;box-shadow:none}
+    .screen{border-radius:0}
+  }
+</style>
+</head>
+<body>
+
+<div class="side">
+  <h1>FPOCAST <span>2.0</span></h1>
+  <p>Model Selector – live demo. One drone platform, many crops. Pick the crop model, and it gets loaded onto the drone's Raspberry Pi before the field survey.</p>
+  <ol>
+    <li>Connect to the ground server</li>
+    <li>Pick a crop model</li>
+    <li>Server pushes it to the Pi and loads it</li>
+    <li>Pi confirms the model is ready</li>
+  </ol>
+  <div class="note"><b>Demo mode:</b> the server and drone are simulated in this page so it works anywhere. In the field, the same screens talk to the real FastAPI server and Raspberry Pi 5.</div>
+</div>
+
+<div class="phone"><div class="screen">
+  <div class="topbar">
+    <span class="demo-tag">DEMO</span>
+    <div class="brand">
+      <div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 21V11" stroke="#1f7a4d" stroke-width="2.2" stroke-linecap="round"/><path d="M12 12C12 7 8 4 4 4c0 5 3 8 8 8Z" fill="#3fae6e"/><path d="M12 14c0-4 3-7 8-7 0 4-3 7-8 7Z" fill="#1f7a4d"/></svg></div>
+      <div><b>FPOCAST Model Selector</b><small id="hdr">Step 1 of 3 · Connect</small></div>
+    </div>
+    <div class="steps"><div id="st1" class="on"></div><div id="st2"></div><div id="st3"></div></div>
+  </div>
+
+  <div class="body">
+    <!-- SCREEN 1: CONNECT -->
+    <div class="view active" id="v1">
+      <h2>Connect to ground server</h2>
+      <p class="sub">Enter the IP address of the FPOCAST ground server on the field Wi-Fi.</p>
+      <label for="ip">Server address</label>
+      <input id="ip" value="192.168.4.1:8000" spellcheck="false">
+      <button class="btn" id="connectBtn">Connect</button>
+      <div class="err" id="ipErr">Enter an address like 192.168.4.1:8000</div>
+      <div class="card" id="connCard" style="display:none">
+        <div class="row"><span>Ground server</span><b id="cSrv"><i class="dot wait"></i>Checking…</b></div>
+        <div class="row"><span>Drone (Raspberry Pi 5)</span><b id="cPi"><i class="dot"></i>—</b></div>
+        <div class="row"><span>GPS fix</span><b id="cGps">—</b></div>
+        <div class="row"><span>Battery</span><b id="cBat">—</b></div>
+      </div>
+      <button class="btn" id="toModels" style="display:none">Choose crop model →</button>
+    </div>
+
+    <!-- SCREEN 2: SELECT MODEL -->
+    <div class="view" id="v2">
+      <h2>Select crop model</h2>
+      <p class="sub">The list comes from the server. Pick the crop you're surveying today.</p>
+      <div id="modelList"></div>
+      <button class="btn" id="loadBtn" disabled>Load onto drone</button>
+    </div>
+
+    <!-- SCREEN 3: STATUS -->
+    <div class="view" id="v3">
+      <div id="loading">
+        <h2>Loading model</h2>
+        <p class="sub" id="loadName">—</p>
+        <div class="prog"><div id="bar"></div></div>
+        <div style="font-size:12px;color:var(--muted);text-align:right" id="pct">0%</div>
+        <div class="card">
+          <div class="stage" id="s1"><div class="s"></div>Server sends model file to Pi</div>
+          <div class="stage" id="s2"><div class="s"></div>Pi verifies checksum</div>
+          <div class="stage" id="s3"><div class="s"></div>Pi loads model into memory</div>
+          <div class="stage" id="s4"><div class="s"></div>Test run on sample image</div>
+        </div>
+      </div>
+      <div id="ready" style="display:none">
+        <div class="hero">
+          <div class="tick"><svg width="38" height="38" viewBox="0 0 24 24" fill="none"><path d="M5 12.5l4.5 4.5L19 7.5" stroke="#1f7a4d" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+          <h2>Model ready on drone</h2>
+          <p class="sub">The drone will use this model on the next field survey.</p>
+        </div>
+        <div class="card">
+          <div class="row"><span>Loaded model</span><b id="rName">—</b></div>
+          <div class="row"><span>Version</span><b id="rVer">—</b></div>
+          <div class="row"><span>Running on</span><b>Raspberry Pi 5</b></div>
+          <div class="row"><span>Load time</span><b id="rTime">—</b></div>
+          <div class="row"><span>Test inference</span><b id="rInf">—</b></div>
+          <div class="row"><span>Status</span><b><i class="dot ok"></i>Ready</b></div>
+        </div>
+        <button class="btn ghost" id="changeBtn">Change model</button>
+      </div>
+    </div>
+
+    <div class="log" id="log"><span class="g"># API log</span></div>
+    <div class="foot">FPOCAST 2.0 · Tech4Bharat · PS 6.4</div>
+  </div>
+</div></div>
+
+<script>
+// ---- Simulated server: same API the real FastAPI server exposes ----
+const MODELS = [
+  {id:"potato_v1", crop:"Potato", icon:"🥔", bg:"#f3e9dc", task:"Crop vision · plant count & canopy", arch:"YOLOv8n-seg", size:6.4, ver:"1.0.0", inf:142},
+  {id:"tomato_v1", crop:"Tomato", icon:"🍅", bg:"#fbe5e1", task:"Crop vision · fruit & canopy", arch:"YOLOv8n-seg", size:6.6, ver:"1.0.0", inf:151},
+  {id:"onion_v1",  crop:"Onion",  icon:"🧅", bg:"#f1e6f2", task:"Crop vision · stand & canopy", arch:"YOLOv8n-seg", size:6.3, ver:"1.0.0", inf:139},
+  {id:"paddy_v1",  crop:"Paddy",  icon:"🌾", bg:"#f5f0d8", task:"Crop vision · canopy & stress", arch:"YOLOv8n-seg", size:6.8, ver:"0.9.0", inf:158},
+];
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+const logEl = document.getElementById('log');
+function log(html){ logEl.insertAdjacentHTML('beforeend','<br>'+html); logEl.scrollTop = logEl.scrollHeight; }
+
+let selected = null;
+const $ = id => document.getElementById(id);
+
+function go(n){
+  ['v1','v2','v3'].forEach((v,i)=>$(v).classList.toggle('active', i===n-1));
+  ['st1','st2','st3'].forEach((s,i)=>$(s).classList.toggle('on', i<n));
+  $('hdr').textContent = 'Step '+n+' of 3 · '+['Connect','Select model','Status'][n-1];
+}
+
+$('connectBtn').onclick = async ()=>{
+  const ip = $('ip').value.trim();
+  if(!/^[\w.\-]+(:\d+)?$/.test(ip)){ $('ipErr').style.display='block'; return; }
+  $('ipErr').style.display='none';
+  $('connectBtn').disabled = true; $('connectBtn').textContent='Connecting…';
+  $('connCard').style.display='block';
+  $('cSrv').innerHTML='<i class="dot wait"></i>Checking…';
+  log('<span class="m">GET</span> http://'+ip+'/status');
+  await sleep(700);
+  log('← 200 {"server":"online","pi":"online","gps":"3D fix","battery":87}');
+  $('cSrv').innerHTML='<i class="dot ok"></i>Online';
+  await sleep(300);
+  $('cPi').innerHTML='<i class="dot ok"></i>Online';
+  $('cGps').textContent='3D fix · 14 sats';
+  $('cBat').textContent='87 %';
+  $('connectBtn').textContent='Connected ✓';
+  $('toModels').style.display='block';
+};
+
+$('toModels').onclick = async ()=>{
+  go(2);
+  log('<span class="m">GET</span> /models');
+  $('modelList').innerHTML = '<p class="sub">Loading list…</p>';
+  await sleep(500);
+  log('← 200 ['+MODELS.length+' models]');
+  $('modelList').innerHTML = MODELS.map(m=>`
+    <div class="model" data-id="${m.id}">
+      <div class="ic" style="background:${m.bg}">${m.icon}</div>
+      <div class="t"><b>${m.crop}</b><small>${m.task}</small>
+        <div class="tags"><span class="tag">${m.arch}</span><span class="tag">${m.size} MB</span><span class="tag">v${m.ver}</span></div>
+      </div>
+      <div class="radio"></div>
+    </div>`).join('');
+  document.querySelectorAll('.model').forEach(el=>el.onclick=()=>{
+    document.querySelectorAll('.model').forEach(x=>x.classList.remove('sel'));
+    el.classList.add('sel');
+    selected = MODELS.find(m=>m.id===el.dataset.id);
+    $('loadBtn').disabled=false;
+    $('loadBtn').textContent='Load '+selected.crop+' model onto drone';
+  });
+};
+
+$('loadBtn').onclick = async ()=>{
+  const m = selected; go(3);
+  $('loading').style.display='block'; $('ready').style.display='none';
+  $('loadName').textContent = m.crop+' · '+m.arch+' · '+m.size+' MB';
+  ['s1','s2','s3','s4'].forEach(s=>{$(s).className='stage'; $(s).querySelector('.s').textContent='';});
+  $('bar').style.width='0'; $('pct').textContent='0%';
+  const t0 = performance.now();
+  log('<span class="m">POST</span> /models/load {"model_id":"'+m.id+'"}');
+  log('← 202 {"job":"accepted"}');
+  const stage = async (id, from, to, ms, msg)=>{
+    $(id).className='stage run';
+    const steps=12;
+    for(let i=1;i<=steps;i++){ await sleep(ms/steps); const p=Math.round(from+(to-from)*i/steps); $('bar').style.width=p+'%'; $('pct').textContent=p+'%'; }
+    $(id).className='stage done'; $(id).querySelector('.s').textContent='✓';
+    if(msg) log(msg);
+  };
+  await stage('s1',0,60,1600,'<span class="g">pi:</span> received '+m.id+'.onnx ('+m.size+' MB)');
+  await stage('s2',60,70,500,'<span class="g">pi:</span> sha256 OK');
+  await stage('s3',70,90,900,'<span class="g">pi:</span> model loaded (onnxruntime, CPU)');
+  await stage('s4',90,100,700,'<span class="g">pi:</span> test inference '+m.inf+' ms');
+  const secs = ((performance.now()-t0)/1000).toFixed(1);
+  log('<span class="m">GET</span> /status → {"loaded_model":"'+m.id+'","state":"ready"}');
+  await sleep(300);
+  $('rName').textContent=m.icon+' '+m.crop; $('rVer').textContent='v'+m.ver;
+  $('rTime').textContent=secs+' s'; $('rInf').textContent=m.inf+' ms / image';
+  $('loading').style.display='none'; $('ready').style.display='block';
+};
+
+$('changeBtn').onclick = ()=>{ $('loadBtn').disabled = !selected; go(2); };
+</script>
+</body>
+</html>
