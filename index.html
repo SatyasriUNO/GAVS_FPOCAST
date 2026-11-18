@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>FPOCAST 2.0 – Model Selector</title>
+<title>FPOCAST 2.0 – Model Selector (Live Demo)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -91,19 +91,20 @@
 
 <div class="side">
   <h1>FPOCAST <span>2.0</span></h1>
-  <p>Model Selector. One drone platform, many crops. Pick the crop model, and it gets loaded onto the drone's Raspberry Pi before the field survey.</p>
+  <p>Model Selector – live demo. One drone platform, many crops. Pick the crop model, and it gets loaded onto the drone's Raspberry Pi before the field survey.</p>
   <ol>
     <li>Connect to the ground server</li>
     <li>Pick a crop model</li>
     <li>Server pushes it to the Pi and loads it</li>
     <li>Pi confirms the model is ready</li>
   </ol>
-  <div class="note"><b>Field mode:</b> this page talks to the real FPOCAST ground server, which sends the chosen model to the drone's Raspberry Pi.</div>
+  <div class="note"><b>Demo mode:</b> the server and drone are simulated in this page so it works anywhere. In the field, the same screens talk to the real FastAPI server and Raspberry Pi 5.</div>
 </div>
 
 <div class="phone"><div class="screen">
   <div class="topbar">
-        <div class="brand">
+    <span class="demo-tag">DEMO</span>
+    <div class="brand">
       <div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M12 21V11" stroke="#1f7a4d" stroke-width="2.2" stroke-linecap="round"/><path d="M12 12C12 7 8 4 4 4c0 5 3 8 8 8Z" fill="#3fae6e"/><path d="M12 14c0-4 3-7 8-7 0 4-3 7-8 7Z" fill="#1f7a4d"/></svg></div>
       <div><b>FPOCAST Model Selector</b><small id="hdr">Step 1 of 3 · Connect</small></div>
     </div>
@@ -124,7 +125,6 @@
         <div class="row"><span>Drone (Raspberry Pi 5)</span><b id="cPi"><i class="dot"></i>—</b></div>
         <div class="row"><span>GPS fix</span><b id="cGps">—</b></div>
         <div class="row"><span>Battery</span><b id="cBat">—</b></div>
-        <div class="row"><span>Model on drone</span><b id="cLoaded">—</b></div>
       </div>
       <button class="btn" id="toModels" style="display:none">Choose crop model →</button>
     </div>
@@ -150,8 +150,6 @@
           <div class="stage" id="s3"><div class="s"></div>Pi loads model into memory</div>
           <div class="stage" id="s4"><div class="s"></div>Test run on sample image</div>
         </div>
-        <div class="err" id="loadErr"></div>
-        <button class="btn ghost" onclick="go(2)">← Back to models</button>
       </div>
       <div id="ready" style="display:none">
         <div class="hero">
@@ -177,23 +175,19 @@
 </div></div>
 
 <script>
-// ---- Real version: talks to the FPOCAST ground server ----
-const $ = id => document.getElementById(id);
-const logEl = $('log');
-function log(html){ logEl.insertAdjacentHTML('beforeend','<br>'+html); logEl.scrollTop = logEl.scrollHeight; }
+// ---- Simulated server: same API the real FastAPI server exposes ----
+const MODELS = [
+  {id:"potato_v1", crop:"Potato", icon:"🥔", bg:"#f3e9dc", task:"Crop vision · plant count & canopy", arch:"YOLOv8n-seg", size:6.4, ver:"1.0.0", inf:142},
+  {id:"tomato_v1", crop:"Tomato", icon:"🍅", bg:"#fbe5e1", task:"Crop vision · fruit & canopy", arch:"YOLOv8n-seg", size:6.6, ver:"1.0.0", inf:151},
+  {id:"onion_v1",  crop:"Onion",  icon:"🧅", bg:"#f1e6f2", task:"Crop vision · stand & canopy", arch:"YOLOv8n-seg", size:6.3, ver:"1.0.0", inf:139},
+  {id:"paddy_v1",  crop:"Paddy",  icon:"🌾", bg:"#f5f0d8", task:"Crop vision · canopy & stress", arch:"YOLOv8n-seg", size:6.8, ver:"0.9.0", inf:158},
+];
 const sleep = ms => new Promise(r=>setTimeout(r,ms));
-let BASE = '', models = [], selected = null;
+const logEl = document.getElementById('log');
+function log(html){ logEl.insertAdjacentHTML('beforeend','<br>'+html); logEl.scrollTop = logEl.scrollHeight; }
 
-// Pre-fill with the address this page was opened from
-if (location.host) $('ip').value = location.host;
-
-async function api(path, opts){
-  const r = await fetch(BASE + path, opts);
-  const j = await r.json().catch(()=>({}));
-  if (!r.ok) throw new Error(j.detail || ('HTTP ' + r.status));
-  return j;
-}
-function dot(ok){ return ok ? '<i class="dot ok"></i>Online' : '<i class="dot" style="background:#c0392b"></i>Offline'; }
+let selected = null;
+const $ = id => document.getElementById(id);
 
 function go(n){
   ['v1','v2','v3'].forEach((v,i)=>$(v).classList.toggle('active', i===n-1));
@@ -203,107 +197,73 @@ function go(n){
 
 $('connectBtn').onclick = async ()=>{
   const ip = $('ip').value.trim();
-  if(!/^[\w.\-]+(:\d+)?$/.test(ip)){ $('ipErr').textContent='Enter an address like 192.168.4.1:8000'; $('ipErr').style.display='block'; return; }
+  if(!/^[\w.\-]+(:\d+)?$/.test(ip)){ $('ipErr').style.display='block'; return; }
   $('ipErr').style.display='none';
-  BASE = 'http://' + ip;
-  $('connectBtn').disabled = true; $('connectBtn').textContent = 'Connecting…';
-  $('connCard').style.display = 'block';
-  $('cSrv').innerHTML = '<i class="dot wait"></i>Checking…';
-  log('<span class="m">GET</span> ' + BASE + '/status');
-  try {
-    const s = await api('/status');
-    log('← 200 pi.online=' + s.pi.online);
-    $('cSrv').innerHTML = dot(true);
-    $('cPi').innerHTML = dot(s.pi.online);
-    $('cGps').textContent = s.pi.gps || '—';
-    $('cBat').textContent = s.pi.battery != null ? s.pi.battery + ' %' : '—';
-    $('cLoaded').textContent = s.pi.loaded_model || 'none';
-    $('connectBtn').textContent = 'Connected ✓';
-    $('toModels').style.display = 'block';
-    if (!s.pi.online) { $('ipErr').textContent = 'Server is up but the drone (Pi) is not answering. Check the Pi agent is running.'; $('ipErr').style.display='block'; }
-  } catch(e) {
-    log('<span class="e">✗ ' + e.message + '</span>');
-    $('cSrv').innerHTML = dot(false);
-    $('ipErr').textContent = 'Could not reach the server at ' + ip; $('ipErr').style.display = 'block';
-    $('connectBtn').disabled = false; $('connectBtn').textContent = 'Retry';
-  }
+  $('connectBtn').disabled = true; $('connectBtn').textContent='Connecting…';
+  $('connCard').style.display='block';
+  $('cSrv').innerHTML='<i class="dot wait"></i>Checking…';
+  log('<span class="m">GET</span> http://'+ip+'/status');
+  await sleep(700);
+  log('← 200 {"server":"online","pi":"online","gps":"3D fix","battery":87}');
+  $('cSrv').innerHTML='<i class="dot ok"></i>Online';
+  await sleep(300);
+  $('cPi').innerHTML='<i class="dot ok"></i>Online';
+  $('cGps').textContent='3D fix · 14 sats';
+  $('cBat').textContent='87 %';
+  $('connectBtn').textContent='Connected ✓';
+  $('toModels').style.display='block';
 };
 
 $('toModels').onclick = async ()=>{
   go(2);
   log('<span class="m">GET</span> /models');
   $('modelList').innerHTML = '<p class="sub">Loading list…</p>';
-  try { models = await api('/models'); }
-  catch(e){ $('modelList').innerHTML = '<p class="err" style="display:block">'+e.message+'</p>'; return; }
-  log('← 200 [' + models.length + ' models]');
-  if (!models.length){ $('modelList').innerHTML = '<p class="sub">No models found in server/models/.</p>'; return; }
-  $('modelList').innerHTML = models.map(m=>`
+  await sleep(500);
+  log('← 200 ['+MODELS.length+' models]');
+  $('modelList').innerHTML = MODELS.map(m=>`
     <div class="model" data-id="${m.id}">
-      <div class="ic" style="background:#eef5f0">${m.icon || '🌱'}</div>
-      <div class="t"><b>${m.crop}</b><small>${m.task || ''}</small>
-        <div class="tags"><span class="tag">${m.arch || 'ONNX'}</span><span class="tag">${m.size_mb} MB</span><span class="tag">v${m.version || '?'}</span>${m.placeholder ? '<span class="tag">placeholder</span>' : ''}</div>
+      <div class="ic" style="background:${m.bg}">${m.icon}</div>
+      <div class="t"><b>${m.crop}</b><small>${m.task}</small>
+        <div class="tags"><span class="tag">${m.arch}</span><span class="tag">${m.size} MB</span><span class="tag">v${m.ver}</span></div>
       </div>
       <div class="radio"></div>
     </div>`).join('');
   document.querySelectorAll('.model').forEach(el=>el.onclick=()=>{
     document.querySelectorAll('.model').forEach(x=>x.classList.remove('sel'));
     el.classList.add('sel');
-    selected = models.find(m=>m.id===el.dataset.id);
-    $('loadBtn').disabled = false;
-    $('loadBtn').textContent = 'Load ' + selected.crop + ' model onto drone';
+    selected = MODELS.find(m=>m.id===el.dataset.id);
+    $('loadBtn').disabled=false;
+    $('loadBtn').textContent='Load '+selected.crop+' model onto drone';
   });
 };
 
-// Which progress stage each server "stage" word means
-const STAGES = {sending:['s1',30], verifying:['s2',65], loading:['s3',80], testing:['s4',92]};
-const ORDER = ['s1','s2','s3','s4'];
-
 $('loadBtn').onclick = async ()=>{
   const m = selected; go(3);
-  $('loading').style.display='block'; $('ready').style.display='none'; $('loadErr').style.display='none';
-  $('loadName').textContent = m.crop + ' · ' + (m.arch||'ONNX') + ' · ' + m.size_mb + ' MB';
-  ORDER.forEach(s=>{ $(s).className='stage'; $(s).querySelector('.s').textContent=''; });
+  $('loading').style.display='block'; $('ready').style.display='none';
+  $('loadName').textContent = m.crop+' · '+m.arch+' · '+m.size+' MB';
+  ['s1','s2','s3','s4'].forEach(s=>{$(s).className='stage'; $(s).querySelector('.s').textContent='';});
   $('bar').style.width='0'; $('pct').textContent='0%';
-  log('<span class="m">POST</span> /models/load {"model_id":"' + m.id + '"}');
-  try { await api('/models/load', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({model_id:m.id})}); }
-  catch(e){ return showErr(e.message); }
-  log('← 202 accepted');
-
-  let last = '';
-  while (true) {
-    await sleep(400);
-    let s; try { s = await api('/status'); } catch(e){ return showErr(e.message); }
-    const st = s.job.stage;
-    if (st !== last) { log('<span class="g">stage:</span> ' + st); last = st; }
-    if (st === 'error') return showErr(s.job.error);
-    if (st === 'ready') {
-      ORDER.forEach(id=>{ $(id).className='stage done'; $(id).querySelector('.s').textContent='✓'; });
-      $('bar').style.width='100%'; $('pct').textContent='100%';
-      await sleep(300);
-      $('rName').textContent = (m.icon||'') + ' ' + m.crop;
-      $('rVer').textContent = 'v' + (m.version || '?');
-      $('rTime').textContent = s.job.load_time_s + ' s';
-      $('rInf').textContent = s.pi.inference_ms + ' ms / image';
-      $('loading').style.display='none'; $('ready').style.display='block';
-      return;
-    }
-    if (STAGES[st]) {
-      const [id, pct] = STAGES[st];
-      const idx = ORDER.indexOf(id);
-      ORDER.forEach((x,i)=>{
-        if (i < idx){ $(x).className='stage done'; $(x).querySelector('.s').textContent='✓'; }
-        else if (i === idx){ $(x).className='stage run'; }
-      });
-      $('bar').style.width = pct+'%'; $('pct').textContent = pct+'%';
-    }
-  }
+  const t0 = performance.now();
+  log('<span class="m">POST</span> /models/load {"model_id":"'+m.id+'"}');
+  log('← 202 {"job":"accepted"}');
+  const stage = async (id, from, to, ms, msg)=>{
+    $(id).className='stage run';
+    const steps=12;
+    for(let i=1;i<=steps;i++){ await sleep(ms/steps); const p=Math.round(from+(to-from)*i/steps); $('bar').style.width=p+'%'; $('pct').textContent=p+'%'; }
+    $(id).className='stage done'; $(id).querySelector('.s').textContent='✓';
+    if(msg) log(msg);
+  };
+  await stage('s1',0,60,1600,'<span class="g">pi:</span> received '+m.id+'.onnx ('+m.size+' MB)');
+  await stage('s2',60,70,500,'<span class="g">pi:</span> sha256 OK');
+  await stage('s3',70,90,900,'<span class="g">pi:</span> model loaded (onnxruntime, CPU)');
+  await stage('s4',90,100,700,'<span class="g">pi:</span> test inference '+m.inf+' ms');
+  const secs = ((performance.now()-t0)/1000).toFixed(1);
+  log('<span class="m">GET</span> /status → {"loaded_model":"'+m.id+'","state":"ready"}');
+  await sleep(300);
+  $('rName').textContent=m.icon+' '+m.crop; $('rVer').textContent='v'+m.ver;
+  $('rTime').textContent=secs+' s'; $('rInf').textContent=m.inf+' ms / image';
+  $('loading').style.display='none'; $('ready').style.display='block';
 };
-
-function showErr(msg){
-  log('<span class="e">✗ ' + msg + '</span>');
-  $('loadErr').textContent = 'Loading failed: ' + msg;
-  $('loadErr').style.display = 'block';
-}
 
 $('changeBtn').onclick = ()=>{ $('loadBtn').disabled = !selected; go(2); };
 </script>
