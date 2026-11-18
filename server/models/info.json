@@ -1,0 +1,8 @@
+{
+  "crop": "Potato",
+  "icon": "🥔",
+  "task": "Crop vision · plant count & canopy",
+  "arch": "YOLOv8n-seg",
+  "version": "1.0.0",
+  "placeholder": true
+}
