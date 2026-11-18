@@ -3,7 +3,8 @@
 Pick a crop model on your phone → the ground server sends it to the drone's Raspberry Pi → the Pi loads it and confirms.
 
 App Interface Look & Feel - https://fpocastapp.vercel.app/
-Website containing all information and initial data - 
+
+Website containing all information and initial data - https://fpocastwebsite.vercel.app/#home
 
 ```
 Phone browser  ──►  Ground server (laptop, port 8000)  ──►  Raspberry Pi 5 (port 9000)
