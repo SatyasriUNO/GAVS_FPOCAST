@@ -1,0 +1,8 @@
+{
+  "crop": "Tomato",
+  "icon": "🍅",
+  "task": "Crop vision · fruit & canopy",
+  "arch": "YOLOv8n-seg",
+  "version": "1.0.0",
+  "placeholder": true
+}
